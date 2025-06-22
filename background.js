@@ -81,7 +81,6 @@ async function getNetworkCalls(cb) {
 }
 
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-    console.log("GET_SNAPSHOT_DATA", {message, sender, sendResponse});
     if (message.type === "GET_SNAPSHOT_DATA") {
         sendResponse({networkData});
         networkData = []; // Reset after sending

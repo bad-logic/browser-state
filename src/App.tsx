@@ -26,7 +26,6 @@ function App() {
             tabId,
             {type: "CAPTURE_SNAPSHOT"},
             (pageData: IPageData) => {
-                console.log({pageData})
                 setSnapshotData(pageData);
             });
 

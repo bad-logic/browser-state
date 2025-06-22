@@ -8,16 +8,12 @@ interface ISnapShotViewer {
 function SnapshotViewer({type, content}: ISnapShotViewer) {
 
     const codeRef = useRef<HTMLPreElement>(null);
-    const [tab,setTab] = useState<string>('');
+    const [attachmentName,setAttachmentName] = useState<string>('');
 
     useEffect(()=>{
         // @ts-ignore
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            console.log({tabs})
-            const currentUrl = tabs.url;
-            const domain = new URL(currentUrl).hostname;
-            setTab(domain)
-            console.log("Current domain:", domain);
+            setAttachmentName(tabs[0].title)
         });
     },[])
 
@@ -34,10 +30,9 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${tab}-snapshot-${new Date().getUTCMilliseconds()}.${type}`;
+        a.download = `${attachmentName}-${new Date().toISOString()}-snapshot.${type}`;
         a.click();
         URL.revokeObjectURL(url);
-        console.log({a,url,tab})
     };
 
     const lines = content ? content.split("\n") : [];
