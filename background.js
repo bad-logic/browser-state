@@ -1,88 +1,79 @@
-import {getTabId, localStorage} from "./utility.js";
+let networkData = {};
 
-let networkData = [];
-const storageKey = 'network-requests';
-
-async function store(info) {
-    console.log("[requestId]: ", info.requestId);
-    // get items from local store
-    let data = await localStorage.getFromLocalStore(storageKey);
-    console.log("retrieving [requests] from storage", {data});
-    if (data) {
-        console.log("requests found with [length]: ", data.length)
-        const index = data.findIndex((r) => r.requestId === info.requestId);
-        console.log("[index]: ", index);
-        if (index !== -1) {
-            console.log("found index")
-            data[index] = {...data[index], ...info}
-        } else {
-            console.log("index not found")
-            data.push(info);
-        }
-    } else {
-        console.log("requests not found")
-        data = [];
-        data.push(info);
-    }
-    console.log("updating the storage")
-    localStorage.saveToLocalStore(storageKey, data);
-}
-
-chrome.webRequest.onBeforeRequest.addListener(
-    (details) => {
-        const info = {
-            requestId: details.requestId,
-            tabId: details.tabId,
-            method: details.method,
-            url: details.url,
-            requestBody: details.requestBody,
-            start: details.timeStamp
-        }
-        store(info);
-        networkData.push({
-            ...info
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === "complete") {
+        chrome.debugger.attach({ tabId }, "1.3", () => {
+            if (chrome.runtime.lastError) {
+                console.error(chrome.runtime.lastError.message);
+                return;
+            }
+            // Enable Network domain
+            chrome.debugger.sendCommand({ tabId }, "Network.enable", {}, () => {
+                console.log("Network domain enabled for tab", tabId);
+            });
         });
-    },
-    {urls: ["<all_urls>"]},
-    ["requestBody"]
-);
-
-chrome.webRequest.onCompleted.addListener(
-    (details) => {
-
-        const info = {
-            requestId: details.requestId,
-            tabId: details.tabId,
-            method: details.method,
-            url: details.url,
-            status: details.statusCode,
-            statusLine: details.statusLine,
-            responseHeaders: details.responseHeaders,
-            end: details.timeStamp
-        }
-
-        store(info);
-        networkData.push({
-            ...info
-        });
-    },
-    {urls: ["<all_urls>"]},
-    ["responseHeaders"]
-);
-
-async function getNetworkCalls(cb) {
-    const data = await localStorage.getFromLocalStore(storageKey);
-    if (!data) {
-        return [];
     }
-    const currentTabId = await getTabId();
-    console.log({currentTabId})
-    cb({calls: data.filter(d => d.tabId === currentTabId)});
-}
+});
 
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+// Listen for network response events
+chrome.debugger.onEvent.addListener((debuggeeId, message, params) => {
+    console.log({debuggeeId,message,params})
+    if(message === "Network.requestWillBeSent"){
+        networkData[params.requestId] = {
+            tabId: debuggeeId.tabId,
+            requestId:params.requestId,
+            method: params.request.method,
+            url: params.request.url,
+            start: params.timestamp,
+            request:{
+                ...params.request,
+                requestId:params.requestId,
+                tabId: debuggeeId.tabId,
+                contentType: params.request?.headers['content-type'] ?? params.request?.headers['Content-Type']
+            }
+        };
+    }else if (message === "Network.responseReceived") {
+        // Get response body
+        chrome.debugger.sendCommand(
+            debuggeeId,
+            "Network.getResponseBody",
+            { requestId: params.requestId },
+            (response) => {
+                if (networkData[params.requestId]) {
+                    networkData[params.requestId] = {
+                        ...networkData[params.requestId],
+                        status: params.response.status,
+                        statusLine: params.response.statusText,
+                        end: params.timestamp,
+                        response:{
+                            ...params.response,
+                            requestId:params.requestId,
+                            body: response ? response.body : null,
+                            base64Encoded: response ? response.base64Encoded : false,
+                            tabId: debuggeeId.tabId,
+                            contentType: params.response?.headers['content-type'] ?? params.response?.headers['Content-Type']
+                        }
+                    };
+                }
+            }
+        );
+    }
+});
+
+// Handle messages from popup
+chrome.runtime.onMessage.addListener((message, sender, cb) => {
     if (message.type === "GET_SNAPSHOT_DATA") {
-        sendResponse({networkData});
-        networkData = []; // Reset after sending
+        console.log({networkData})
+        const data = [];
+        for(const r in networkData){
+            data.push(networkData[r]);
+        }
+        cb({ networkData: data });
+        networkData = {}; // Reset after sending
     }
+});
+
+// Detach debugger when tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+    chrome.debugger.detach({ tabId });
 });

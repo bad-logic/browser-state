@@ -11,6 +11,7 @@ export default defineManifest(async () => ({
         "storage",
         "webNavigation",
         "webRequest",
+        "debugger"
         // "webRequestBlocking",
     ],
     background: {

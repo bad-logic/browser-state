@@ -3,6 +3,7 @@ import type {IRequest} from "../utils/interfaces.ts";
 import {Card, CardContent} from "./Card.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "./Tabs.tsx";
 import {ScrollArea} from "./ScrollArea.tsx";
+import CodeBlock from "./CodeBlock.tsx";
 
 
 interface INetworkPanel {
@@ -18,15 +19,22 @@ export default function NetworkTab({networkData}: INetworkPanel) {
         setActiveTab("overview");
     }, [selectedRequest]);
 
-    const renderContent = (data: any) => {
+    const renderContent = ( data: any, type = "application/json", isBase64Encoded = false) => {
+        console.log({data,type,isBase64Encoded})
         if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
             return <p className="text-sm text-gray-500">No data</p>;
         }
-        return (
-            <pre className="text-sm whitespace-pre-wrap bg-gray-100 p-2 rounded-md">
-        {JSON.stringify(data, null, 2)}
-      </pre>
-        );
+        if(type==="application/json") {
+            return(
+                <pre className="text-sm whitespace-pre-wrap bg-gray-100 p-2 rounded-md">
+                    {JSON.stringify(data, null, 2)}
+                </pre>
+            );
+        }else if (type.startsWith("image")) {
+            return <image src={isBase64Encoded ? `data:${type};base64,${data}` : data }/>
+        } else {
+            return <CodeBlock code={isBase64Encoded ? atob(data) : data}/>;
+        }
     };
 
     return (
@@ -89,8 +97,10 @@ export default function NetworkTab({networkData}: INetworkPanel) {
                         <Tabs value={activeTab} className="flex-1">
                             <TabsList>
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="headers">Headers</TabsTrigger>
-                                <TabsTrigger value="body">Body</TabsTrigger>
+                                <TabsTrigger value="request">Request</TabsTrigger>
+                                <TabsTrigger value="requestbody">Request[Body]</TabsTrigger>
+                                <TabsTrigger value="response">Response</TabsTrigger>
+                                <TabsTrigger value="responsebody">Response[Body]</TabsTrigger>
                             </TabsList>
 
                             <div className="my-2">
@@ -98,15 +108,21 @@ export default function NetworkTab({networkData}: INetworkPanel) {
                                     {renderContent({
                                         method: selectedRequest.method,
                                         url: selectedRequest.url,
-                                        status: selectedRequest.statusLine,
+                                        status: selectedRequest.status,
                                         duration: selectedRequest.end - selectedRequest.start,
                                     })}
                                 </TabsContent>
-                                <TabsContent value="headers">
-                                    {renderContent(selectedRequest.responseHeaders)}
+                                <TabsContent value="request">
+                                    {renderContent(selectedRequest.request)}
                                 </TabsContent>
-                                <TabsContent value="body">
-                                    {renderContent(selectedRequest.requestBody)}
+                                <TabsContent value="requestbody">
+                                    {renderContent(selectedRequest.request?.postData, selectedRequest.request?.contentType)}
+                                </TabsContent>
+                                <TabsContent value="response">
+                                    {renderContent(selectedRequest.response)}
+                                </TabsContent>
+                                <TabsContent value="responsebody">
+                                    {renderContent(selectedRequest.response?.body, selectedRequest.response?.contentType,selectedRequest.response?.base64Encoded )}
                                 </TabsContent>
                             </div>
                         </Tabs>

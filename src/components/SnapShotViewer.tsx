@@ -1,4 +1,5 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useState} from "react";
+import CodeBlock from "./CodeBlock.tsx";
 
 interface ISnapShotViewer {
     type: string;
@@ -6,8 +7,6 @@ interface ISnapShotViewer {
 }
 
 function SnapshotViewer({type, content}: ISnapShotViewer) {
-
-    const codeRef = useRef<HTMLPreElement>(null);
     const [attachmentName,setAttachmentName] = useState<string>('');
 
     useEffect(()=>{
@@ -34,8 +33,6 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
         a.click();
         URL.revokeObjectURL(url);
     };
-
-    const lines = content ? content.split("\n") : [];
 
     return (
         <div className="relative border rounded-lg overflow-hidden bg-gray-900 text-gray-100 font-mono">
@@ -88,22 +85,7 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
                     </button>
                 </div>
             </div>
-            <div className="flex overflow-auto max-h-[60vh]">
-        <pre
-            className="select-none bg-gray-800 text-gray-500 text-right pr-4 leading-6"
-            aria-hidden="true"
-        >
-          {lines.map((_, i) => (
-              <div key={i}>{i + 1}</div>
-          ))}
-        </pre>
-                <pre
-                    ref={codeRef}
-                    className="flex-1 px-4 py-2 whitespace-pre-wrap leading-6"
-                >
-          <code>{content || "No content captured"}</code>
-        </pre>
-            </div>
+            <CodeBlock className={"max-h-[60vh]"} code={content}/>
         </div>
     );
 }
