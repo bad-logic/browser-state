@@ -8,16 +8,16 @@ type TabsContextType = {
 const TabsContext = createContext<TabsContextType | undefined>(undefined);
 
 type TabsProps = {
-    defaultValue: string;
+    value: string;
     children: React.ReactNode;
-};
+} & React.HTMLAttributes<HTMLDivElement>;
 
-export const Tabs: React.FC<TabsProps> = ({defaultValue, children}) => {
-    const [selected, setSelected] = useState(defaultValue);
+export const Tabs: React.FC<TabsProps> = ({value, className = "", children}) => {
+    const [selected, setSelected] = useState(value);
 
     return (
         <TabsContext.Provider value={{selected, setSelected}}>
-            <div>{children}</div>
+            <div className={className}>{children}</div>
         </TabsContext.Provider>
     );
 };
@@ -52,6 +52,7 @@ export const TabsTrigger: React.FC<TabsTriggerProps> = ({value, children, classN
         <button
             type="button"
             onClick={() => setSelected(value)}
+
             className={`px-4 py-2 text-sm font-medium focus:outline-none ${
                 isSelected
                     ? "border-b-2 border-blue-600 text-blue-600"
@@ -77,5 +78,5 @@ export const TabsContent: React.FC<TabsContentProps> = ({value, children, classN
 
     if (selected !== value) return null;
 
-    return <div className={`p-4 ${className}`}>{children}</div>;
+    return <div className={`p-4 h-[50vh] overflow-auto ${className}`}>{children}</div>;
 };

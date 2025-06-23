@@ -5,16 +5,11 @@ type ScrollAreaProps = React.HTMLAttributes<HTMLDivElement> & {
 };
 
 export const ScrollArea: React.FC<ScrollAreaProps> = ({children, className = "", ...props}) => {
-    // const style =
-    //     typeof maxHeight === "number"
-    //         ? {maxHeight: `${maxHeight}px`, overflowY: "auto"}
-    //         : {maxHeight, overflowY: "auto"};
 
     return (
         <div
             className={`scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100 ${className}`}
             style={{
-                maxHeight:"300px",
                 overflowY: "auto"
             }}
             {...props}

@@ -46,7 +46,7 @@ function App() {
     };
 
     return (
-        <div className="w-[700px] h-[600px] p-4 overflow-hidden flex flex-col">
+        <div className="w-[800px] h-[600px] p-4 overflow-hidden flex flex-col">
             <h1 className="text-xl font-semibold mb-4">Page Snapshot: {tabId}</h1>
 
             <div className="mb-4 space-x-2">
