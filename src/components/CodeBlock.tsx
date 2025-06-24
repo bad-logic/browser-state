@@ -1,4 +1,4 @@
-import React, {useRef} from "react";
+import React from "react";
 
 interface ICodeProps {
     code: string;
@@ -6,7 +6,6 @@ interface ICodeProps {
 
 export default function CodeBlock({code,className=""}:ICodeProps & React.HTMLAttributes<HTMLDivElement>){
 
-    const codeRef = useRef<HTMLPreElement>(null);
     const lines = code ? code.split("\n") : [];
 
     return (
@@ -19,8 +18,8 @@ export default function CodeBlock({code,className=""}:ICodeProps & React.HTMLAtt
                       <div key={i}>{i + 1}</div>
                   ))}
                 </pre>
-            <pre ref={codeRef} className="flex-1 px-4 py-2 whitespace-pre-wrap leading-6">
-                  <code>{code || "No content captured"}</code>
+                <pre className="flex-1 px-4 py-2 whitespace-pre-wrap leading-6">
+                      <code>{code || "No content captured"}</code>
                 </pre>
         </div>
     );
