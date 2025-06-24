@@ -26,12 +26,14 @@ export default function NetworkTab({networkData}: INetworkPanel) {
         }
         if(type==="application/json") {
             return(
-                <pre className="text-sm whitespace-pre-wrap bg-gray-100 p-2 rounded-md">
-                    {JSON.stringify(data, null, 2)}
-                </pre>
+                <div className={`flex overflow-auto`}>
+                    <pre className="text-sm whitespace-pre-wrap bg-gray-100 p-2 rounded-md">
+                        {JSON.stringify(data, null, 2)}
+                    </pre>
+                </div>
             );
         }else if (type.startsWith("image")) {
-            return <image src={isBase64Encoded ? `data:${type};base64,${data}` : data }/>
+            return <img src={isBase64Encoded ? `data:${type};base64,${data}` : data } alt={`response image`}/>
         } else {
             return <CodeBlock code={isBase64Encoded ? atob(data) : data}/>;
         }

@@ -51,7 +51,7 @@ chrome.debugger.onEvent.addListener((debuggeeId, message, params) => {
                             body: response ? response.body : null,
                             base64Encoded: response ? response.base64Encoded : false,
                             tabId: debuggeeId.tabId,
-                            contentType: params.response?.headers['content-type'] ?? params.response?.headers['Content-Type']
+                            contentType: params.response?.headers['content-type'] ?? params.response?.headers['Content-Type'] ?? params.response.mimeType
                         }
                     };
                 }
