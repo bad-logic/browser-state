@@ -1,7 +1,7 @@
 import React from "react";
 
 interface ICodeProps {
-    code: string;
+    code?: string;
 }
 
 export default function CodeBlock({code,className=""}:ICodeProps & React.HTMLAttributes<HTMLDivElement>){

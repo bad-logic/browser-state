@@ -42,9 +42,11 @@ export default function NetworkTab({networkData}: INetworkPanel) {
     return (
         <div className="relative p-4">
             {/* Request list */}
-            <ScrollArea className="h-[80vh] rounded-xl p-2 w-full">
+            <ScrollArea className="max-h-[80vh] rounded-xl p-2 w-full">
                 <div className="space-y-2">
-                    {networkData.map((req) => (
+                    {networkData.length===0 ?
+                        <p className="text-sm text-gray-500">No data Captured</p>
+                        : networkData.map((req) => (
                         <Card
                             key={req.requestId}
                             className="cursor-pointer hover:bg-gray-100"

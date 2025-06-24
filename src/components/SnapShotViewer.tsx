@@ -3,15 +3,15 @@ import CodeBlock from "./CodeBlock.tsx";
 
 interface ISnapShotViewer {
     type: string;
-    content: string
+    content?: string
 }
 
 function SnapshotViewer({type, content}: ISnapShotViewer) {
     const [attachmentName,setAttachmentName] = useState<string>('');
 
     useEffect(()=>{
-        // @ts-ignore
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        // @ts-expect-error chrome object is available in chrome extension environment
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs: { title:string }[]) {
             setAttachmentName(tabs[0].title)
         });
     },[])
@@ -85,7 +85,7 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
                     </button>
                 </div>
             </div>
-            <CodeBlock className={"max-h-[60vh]"} code={content}/>
+            <CodeBlock className={"max-h-[66vh]"} code={content}/>
         </div>
     );
 }
