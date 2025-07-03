@@ -47,7 +47,7 @@ jobs:
           --branch "$GITHUB_HEAD_REF" \
           --github-actions \
           --no-update \
-          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json || true
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json
 
       - name: Comment on PR - Secrets Found
         if: ${{ github.event_name == 'pull_request' && steps.trufflehog.outcome == 'failure' }}
