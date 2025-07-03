@@ -1,0 +1,37 @@
+name: test for leaked secrets on pr
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+  permissions:
+    contents: read
+    id-token: write
+    issue: write
+    pull-requests: write
+
+  jobs:
+    trufflehog-scan:
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          shell: bash
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        - name: Scanning
+          id: trufflehog
+          uses: trufflesecurity/trufflehog@main
+          continue-on-error: true
+          with:
+            base: ""
+            head: ${{ github.ref_name }}
+#            extra_args: --results=verified,unknown
+        - name: Result
+          if: steps.trufflehog.outcome=='failure'
+          run: exit 1
+
