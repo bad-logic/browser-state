@@ -1,9 +1,6 @@
 name: Scan for leaked secrets
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -31,11 +28,6 @@ jobs:
           ARGS: --json --debug
           COMMIT_IDS: ${{ toJson(github.event.commits.*.id) }}
         run: |
-          ##########################################
-          ## ADVANCED USAGE                       ##
-          ## Scan by BASE & HEAD user inputs      ##
-          ## If BASE == HEAD, exit with error     ##
-          ##########################################
           # Check if jq is installed, if not, install it
           if ! command -v jq &> /dev/null
           then
@@ -44,46 +36,6 @@ jobs:
           fi
           
           git status >/dev/null  # make sure we are in a git repository
-          if [ -n "$BASE" ] || [ -n "$HEAD" ]; then
-            if [ -n "$BASE" ]; then
-              base_commit=$(git rev-parse "$BASE" 2>/dev/null) || true
-            else
-              base_commit=""
-            fi
-            if [ -n "$HEAD" ]; then
-              head_commit=$(git rev-parse "$HEAD" 2>/dev/null) || true
-            else
-              head_commit=""
-            fi
-            if [ "$base_commit" == "$head_commit" ] ; then
-              echo "::warning::BASE and HEAD commits are the same commit. Skipping scan."
-              exit 1
-            fi
-
-          ##########################################
-          ## Scan commits based on event type     ##
-          ##########################################
-          else
-            if [ "${{ github.event_name }}" == "push" ]; then
-              COMMIT_LENGTH=$(printenv COMMIT_IDS | jq length)
-              if [ $COMMIT_LENGTH == "0" ]; then
-                echo "No commits to scan"
-                exit 0
-              fi
-              HEAD=${{ github.event.after }}
-              if [ ${{ github.event.before }} == "0000000000000000000000000000000000000000" ]; then
-                BASE=""
-              else
-                BASE=${{ github.event.before }}
-              fi
-            elif [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "schedule" ]; then
-              BASE=""
-              HEAD=""
-            elif [ "${{ github.event_name }}" == "pull_request" ]; then
-              BASE=${{github.event.pull_request.base.sha}}
-              HEAD=${{github.event.pull_request.head.sha}}
-            fi
-          fi
 
           ##########################################
           ##          Run TruffleHog              ##
@@ -92,8 +44,7 @@ jobs:
           docker run --rm -v "${{ github.workspace }}:/tmp" -w /tmp \
           ghcr.io/trufflesecurity/trufflehog:$VERSION \
           git file:///tmp \
-          ${BASE:+--since-commit $BASE} \
-          ${HEAD:+--branch $HEAD} \
+          --branch "$GITHUB_HEAD_REF"
           --github-actions \
           --no-update \
           $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json || true
