@@ -79,7 +79,7 @@ jobs:
                   **Secret Type:** ${result.DetectorName}  
                   **Raw Value (Redacted):** \`${result.Redacted}\`  
                   **ARN:** \`${extra.arn || 'N/A'}\`  
-                  **Rotation Guide:** [Link](${extra.rotation_guide || '#'})`;
+                  **Rotation Guide:** [Link](${extra.rotation_guide || '#'})\n`;
                 }
               }
             } else {
