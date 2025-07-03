@@ -1,4 +1,4 @@
-name: Scan for leaked secrets
+name: Scan Pull Request
 
 on:
   pull_request:
@@ -21,19 +21,11 @@ jobs:
           fetch-depth: 0
 
       - name: Scanning
-        id: trufflehog
         continue-on-error: true
         env:
           VERSION: 3.89.2
           ARGS: --results=verified,unknown --json --debug
-        run: |
-          # Check if jq is installed, if not, install it
-          if ! command -v jq &> /dev/null
-          then
-            echo "jq could not be found, installing..."
-            apt-get -y update && apt-get install -y jq
-          fi
-          
+        run: | 
           git status >/dev/null  # make sure we are in a git repository
 
           ##########################################
@@ -63,16 +55,16 @@ jobs:
                 .map(line => line.trim())
                 .filter(Boolean)
                 .map(JSON.parse);
-      
+
               if (results.length === 0) {
-                body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this $GITHUB_HEAD_REF.`;
+                body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in $GITHUB_HEAD_REF Branch.`;
               } else {
-                body = `🔐 **TruffleHog scan found potential secrets.**\n\nTotal: **${results.length}** findings\n\n`;
-      
+                body = `🔐 **TruffleHog scan found potential secrets in $GITHUB_HEAD_REF Branch.**\n\nTotal: **${results.length}** findings\n\n`;
+
                 for (const result of results) {
                   const git = result.SourceMetadata?.Data?.Git || {};
                   const extra = result.ExtraData || {};
-      
+
                   body += `- **File:** \`${git.file}\` (Line ${git.line})  
                   **Commit:** [\`${git.commit.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${git.commit})  
                   **Email:** ${git.email}  
@@ -83,9 +75,9 @@ jobs:
                 }
               }
             } else {
-              body = '⚠️ **TruffleHog scan could not produce any results.';
+              body = '⚠️ **TruffleHog scan could not produce any results for $GITHUB_HEAD_REF Branch.';
             }
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -94,5 +86,8 @@ jobs:
             });
 
       - name: Result
-        if: steps.trufflehog.outcome=='failure'
-        run: exit 1
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          if [ -S "$GITHUB_WORKSPACE/trufflehog_results.json" ]; then
+            exit 1
+          fi
