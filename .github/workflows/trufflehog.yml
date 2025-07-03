@@ -25,8 +25,7 @@ jobs:
         continue-on-error: true
         env:
           VERSION: 3.89.2
-          ARGS: --json --debug
-          COMMIT_IDS: ${{ toJson(github.event.commits.*.id) }}
+          ARGS: --results=verified,unknown --json --debug
         run: |
           # Check if jq is installed, if not, install it
           if ! command -v jq &> /dev/null
@@ -47,32 +46,23 @@ jobs:
           --branch "$GITHUB_HEAD_REF" \
           --github-actions \
           --no-update \
-          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.txt
 
-      - name: Comment on PR - Secrets Found
-        if: ${{ github.event_name == 'pull_request' && steps.trufflehog.outcome == 'failure' }}
+      - name: Comment on PR
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
         with:
           script: |
-            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.txt');
             const summary = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8');
+            const noSecBody= `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`;
+            const secBody = `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nPlease review and remediate sensitive data if necessary.`;
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nlease review and remediate sensitive data if necessary.\n\n\`\`\`json\n${summary}\n\`\`\``
-            });
-
-      - name: Comment on PR - No Secrets Found
-        if: ${{ github.event_name == 'pull_request' && steps.trufflehog.outcome != 'failure' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`
+              body: ``\`\`json\n${summary}\n\`\`\``
             });
 
       - name: Result
