@@ -142,6 +142,11 @@ jobs:
       - name: Result
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [ -S "$GITHUB_WORKSPACE/trufflehog_results.json" ]; then
+          file=$(cat "$GITHUB_WORKSPACE/trufflehog_results.json");
+          echo "$file"
+          if [ -z "$file" ]; then
+            echo "file is empty"
+          else
+            echo "file is not empty"
             exit 1
           fi

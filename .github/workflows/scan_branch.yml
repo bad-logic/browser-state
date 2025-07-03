@@ -57,9 +57,9 @@ jobs:
                 .map(JSON.parse);
 
               if (results.length === 0) {
-                body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in $GITHUB_HEAD_REF Branch.`;
+                body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in ${process.env.GITHUB_HEAD_REF} Branch.`;
               } else {
-                body = `🔐 **TruffleHog scan found potential secrets in $GITHUB_HEAD_REF Branch.**\n\nTotal: **${results.length}** findings\n\n`;
+                body = `🔐 **TruffleHog scan found potential secrets in ${process.env.GITHUB_HEAD_REF} Branch.**\n\nTotal: **${results.length}** findings\n\n`;
 
                 for (const result of results) {
                   const git = result.SourceMetadata?.Data?.Git || {};
@@ -75,7 +75,7 @@ jobs:
                 }
               }
             } else {
-              body = '⚠️ **TruffleHog scan could not produce any results for $GITHUB_HEAD_REF Branch.';
+              body = '⚠️ **TruffleHog scan could not produce any results for ${process.env.GITHUB_HEAD_REF} Branch.';
             }
 
             github.rest.issues.createComment({
@@ -88,6 +88,11 @@ jobs:
       - name: Result
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          if [ -S "$GITHUB_WORKSPACE/trufflehog_results.json" ]; then
+          file=$(cat "$GITHUB_WORKSPACE/trufflehog_results.json");
+          echo "$file"
+          if [ -z "$file" ]; then
+            echo "file is empty"
+          else
+            echo "file is not empty"
             exit 1
           fi
