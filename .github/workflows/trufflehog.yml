@@ -58,7 +58,7 @@ jobs:
             const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
             let body;
             if(fs.existsSync(filePath)){
-              const summary = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8');
+              const summary = fs.readFileSync(filePath, 'utf8');
               body = `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nPlease review and remediate sensitive data if necessary.\n\n`\`\`json\n${summary}\n\`\`\``;
             }else{
               body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`;
