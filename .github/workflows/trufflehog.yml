@@ -25,7 +25,7 @@ jobs:
         continue-on-error: true
         env:
           VERSION: 3.89.2
-          ARGS: --results=verified,unknown --debug
+          ARGS: --results=verified,unknown --json --debug
         run: |
           # Check if jq is installed, if not, install it
           if ! command -v jq &> /dev/null
@@ -46,7 +46,7 @@ jobs:
           --branch "$GITHUB_HEAD_REF" \
           --github-actions \
           --no-update \
-          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.txt
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json
 
       - name: Comment on PR
         if: ${{ github.event_name == 'pull_request' }}
@@ -55,7 +55,7 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.txt');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
             let body;
             if (fs.existsSync(filePath)) {
               const data = fs.readFileSync(filePath, 'utf8').trim();
