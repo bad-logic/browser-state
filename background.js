@@ -3,6 +3,7 @@ let networkData = {};
 // Detach debugger when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
     chrome.debugger.detach({ tabId });
+
 });
 
 
