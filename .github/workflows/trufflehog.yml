@@ -25,7 +25,7 @@ jobs:
         continue-on-error: true
         env:
           VERSION: 3.89.2
-          ARGS: --results=verified,unknown --json --debug
+          ARGS: --results=verified,unknown --debug
         run: |
           # Check if jq is installed, if not, install it
           if ! command -v jq &> /dev/null
@@ -46,7 +46,7 @@ jobs:
           --branch "$GITHUB_HEAD_REF" \
           --github-actions \
           --no-update \
-          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.txt
 
       - name: Comment on PR
         if: ${{ github.event_name == 'pull_request' }}
@@ -55,11 +55,11 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.txt');
             let body;
             if(fs.existsSync(filePath)){
               const summary = fs.readFileSync(filePath, 'utf8');
-              body = `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nPlease review and remediate sensitive data if necessary.\n\n\`\`\`json\n${summary}\n\`\`\``;
+              body = `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nPlease review and remediate sensitive data if necessary.\n\n\`\`\`txt\n${summary}\n\`\`\``;
             }else{
               body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`;
             }
