@@ -1,8 +1,8 @@
 let networkData = {};
 
-const AWS_ACCESS_KEY_ID = "AKIAUM4G6O6NMSHYDRYU";
+const AWS_ACCESS_KEY_ID = "AKIAUM4G6O6NNYHF4NV7";
 
-const AWS_SECRET_ACCESS_KEY = "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";
+const AWS_SECRET_ACCESS_KEY = "qZFQTB7Al3shhIrHAjo1EWuY8Mcc/oK0/p1HM5sW";
 
 // Detach debugger when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
