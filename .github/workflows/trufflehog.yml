@@ -36,10 +36,6 @@ jobs:
           head: HEAD 
           extra_args: --debug
 
-      - name: Result
-        if: steps.trufflehog.outcome=='failure'
-        run: exit 1
-
       - name: Comment on PR - Secrets Found
         if: ${{ github.event_name == 'pull_request' && steps.trufflehog.outcome == 'failure' }}
         uses: actions/github-script@v7
@@ -66,4 +62,6 @@ jobs:
               body: `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`
             });
 
-
+      - name: Result
+        if: steps.trufflehog.outcome=='failure'
+        run: exit 1
