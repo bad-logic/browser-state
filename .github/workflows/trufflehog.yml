@@ -17,9 +17,6 @@ permissions:
 jobs:
   trufflehog-scan:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,21 +25,11 @@ jobs:
 
       - name: Scanning
         id: trufflehog
-        # uses: trufflesecurity/trufflehog@main
         continue-on-error: true
-        shell: bash
-        working-directory: ${{ inputs.path }}
         env:
-          BASE: ${{ inputs.base }}
-          HEAD: ${{ inputs.head }}
-          ARGS: ${{ inputs.extra_args }}
+          VERSION: 3.89.2
+          ARGS: --only-verified --json
           COMMIT_IDS: ${{ toJson(github.event.commits.*.id) }}
-          VERSION: ${{ inputs.version }}
-        # with:
-        #   path: ./ 
-        #   base: "${{ github.event.repository.default_branch }}" 
-        #   head: HEAD 
-        #   extra_args: --debug > trufflehog_results.txt
         run: |
           ##########################################
           ## ADVANCED USAGE                       ##
@@ -69,58 +56,60 @@ jobs:
               head_commit=""
             fi
             if [ "$base_commit" == "$head_commit" ] ; then
-              echo "::error::BASE and HEAD commits are the same. TruffleHog won't scan anything. Please see documentation (https://github.com/trufflesecurity/trufflehog#octocat-trufflehog-github-action)."
+              echo "::warning::BASE and HEAD commits are the same commit. Skipping scan."
               exit 1
             fi
-            ##########################################
-            ## Scan commits based on event type     ##
-            ##########################################
-            else
-              if [ "${{ github.event_name }}" == "push" ]; then
-                COMMIT_LENGTH=$(printenv COMMIT_IDS | jq length)
-                if [ $COMMIT_LENGTH == "0" ]; then
-                  echo "No commits to scan"
-                  exit 0
-                fi
-                HEAD=${{ github.event.after }}
-                if [ ${{ github.event.before }} == "0000000000000000000000000000000000000000" ]; then
-                  BASE=""
-                else
-                  BASE=${{ github.event.before }}
-                fi
-              elif [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "schedule" ]; then
-                BASE=""
-                HEAD=""
-              elif [ "${{ github.event_name }}" == "pull_request" ]; then
-                BASE=${{github.event.pull_request.base.sha}}
-                HEAD=${{github.event.pull_request.head.sha}}
-              fi
-            fi
-            ##########################################
-            ##          Run TruffleHog              ##
-            ##########################################
 
-            docker run --rm -v "${{ github.workspace }}:/tmp" -w /tmp \
-            ghcr.io/trufflesecurity/trufflehog:$VERSION \
-            git file:///tmp \
-            ${BASE:+--since-commit $BASE} \
-            ${HEAD:+--branch $HEAD} \
-            --github-actions \
-            --no-update \
-            $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json || true
+          ##########################################
+          ## Scan commits based on event type     ##
+          ##########################################
+          else
+            if [ "${{ github.event_name }}" == "push" ]; then
+              COMMIT_LENGTH=$(printenv COMMIT_IDS | jq length)
+              if [ $COMMIT_LENGTH == "0" ]; then
+                echo "No commits to scan"
+                exit 0
+              fi
+              HEAD=${{ github.event.after }}
+              if [ ${{ github.event.before }} == "0000000000000000000000000000000000000000" ]; then
+                BASE=""
+              else
+                BASE=${{ github.event.before }}
+              fi
+            elif [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "schedule" ]; then
+              BASE=""
+              HEAD=""
+            elif [ "${{ github.event_name }}" == "pull_request" ]; then
+              BASE=${{github.event.pull_request.base.sha}}
+              HEAD=${{github.event.pull_request.head.sha}}
+            fi
+          fi
+
+          ##########################################
+          ##          Run TruffleHog              ##
+          ##########################################
+
+          docker run --rm -v "${{ github.workspace }}:/tmp" -w /tmp \
+          ghcr.io/trufflesecurity/trufflehog:$VERSION \
+          git file:///tmp \
+          ${BASE:+--since-commit $BASE} \
+          ${HEAD:+--branch $HEAD} \
+          --github-actions \
+          --no-update \
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json || true
 
       - name: Comment on PR - Secrets Found
         if: ${{ github.event_name == 'pull_request' && steps.trufflehog.outcome == 'failure' }}
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const summary = fs.readFileSync(trufflehog_results.json, 'utf8');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
+            const summary = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8');
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nPlease review and remediate sensitive data if necessary.\n\n${summary}`
+              body: `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nlease review and remediate sensitive data if necessary.\n\n\`\`\`json\n${summary}\n\`\`\``
             });
 
       - name: Comment on PR - No Secrets Found
