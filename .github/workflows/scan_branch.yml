@@ -38,7 +38,7 @@ jobs:
           --branch "$GITHUB_HEAD_REF" \
           --github-actions \
           --no-update \
-          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_branch.json
 
       - name: Comment on PR
         if: ${{ github.event_name == 'pull_request' }}
@@ -47,7 +47,7 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_branch.json');
             let body;
             if (fs.existsSync(filePath)) {
               const data = fs.readFileSync(filePath, 'utf8').trim();
@@ -88,7 +88,7 @@ jobs:
       - name: Result
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          file=$(cat "$GITHUB_WORKSPACE/trufflehog_results.json");
+          file=$(cat "$GITHUB_WORKSPACE/trufflehog_branch.json");
           echo "$file"
           if [ -z "$file" ]; then
             echo "file is empty"

@@ -24,7 +24,7 @@ jobs:
         continue-on-error: true
         env:
           VERSION: 3.89.2
-          ARGS: --json --debug
+          ARGS: --results=verified,unknown --json --debug
           COMMIT_IDS: ${{ toJson(github.event.commits.*.id) }}
         run: |
           ##########################################
@@ -92,7 +92,7 @@ jobs:
           ${HEAD:+--branch $HEAD} \
           --github-actions \
           --no-update \
-          $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json || true
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_pr.json || true
 
       - name: Comment on PR
         if: ${{ github.event_name == 'pull_request' }}
@@ -101,7 +101,7 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.json');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_pr.json');
             let body;
             if (fs.existsSync(filePath)) {
               const data = fs.readFileSync(filePath, 'utf8').trim();
@@ -142,7 +142,7 @@ jobs:
       - name: Result
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          file=$(cat "$GITHUB_WORKSPACE/trufflehog_results.json");
+          file=$(cat "$GITHUB_WORKSPACE/trufflehog_pr.json");
           echo "$file"
           if [ -z "$file" ]; then
             echo "file is empty"
