@@ -28,7 +28,7 @@ jobs:
         continue-on-error: true
         env:
           VERSION: 3.89.2
-          ARGS: --only-verified --json
+          ARGS: --json
           COMMIT_IDS: ${{ toJson(github.event.commits.*.id) }}
         run: |
           ##########################################
