@@ -57,11 +57,33 @@ jobs:
             const path = require('path');
             const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_results.txt');
             let body;
-            if(fs.existsSync(filePath)){
-              const summary = fs.readFileSync(filePath, 'utf8');
-              body = `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nPlease review and remediate sensitive data if necessary.\n\n\`\`\`txt\n${summary}\n\`\`\``;
-            }else{
-              body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`;
+            if (fs.existsSync(filePath)) {
+              const data = fs.readFileSync(filePath, 'utf8').trim();
+              const results = data.split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(JSON.parse);
+      
+              if (results.length === 0) {
+                body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this $GITHUB_HEAD_REF.`;
+              } else {
+                body = `🔐 **TruffleHog scan found potential secrets.**\n\nTotal: **${results.length}** findings\n\n`;
+      
+                for (const result of results) {
+                  const git = result.SourceMetadata?.Data?.Git || {};
+                  const extra = result.ExtraData || {};
+      
+                  body += `- **File:** \`${git.file}\` (Line ${git.line})  
+                  **Commit:** [\`${git.commit.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${git.commit})  
+                  **Email:** ${git.email}  
+                  **Secret Type:** ${result.DetectorName}  
+                  **Raw Value (Redacted):** \`${result.Redacted}\`  
+                  **ARN:** \`${extra.arn || 'N/A'}\`  
+                  **Rotation Guide:** [Link](${extra.rotation_guide || '#'})`;
+                }
+              }
+            } else {
+              body = '⚠️ **TruffleHog scan could not produce any results.';
             }
             
             github.rest.issues.createComment({
