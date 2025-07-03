@@ -1,0 +1,152 @@
+name: Scan Feature Branch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  trufflehog-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scanning
+        continue-on-error: true
+        env:
+          VERSION: 3.89.2
+          ARGS: --results=verified,unknown --json --debug
+          COMMIT_IDS: ${{ toJson(github.event.commits.*.id) }}
+        run: |
+          ##########################################
+          ## ADVANCED USAGE                       ##
+          ## Scan by BASE & HEAD user inputs      ##
+          ## If BASE == HEAD, exit with error     ##
+          ##########################################
+          # Check if jq is installed, if not, install it
+          if ! command -v jq &> /dev/null
+          then
+            echo "jq could not be found, installing..."
+            apt-get -y update && apt-get install -y jq
+          fi
+          
+          git status >/dev/null  # make sure we are in a git repository
+          if [ -n "$BASE" ] || [ -n "$HEAD" ]; then
+            if [ -n "$BASE" ]; then
+              base_commit=$(git rev-parse "$BASE" 2>/dev/null) || true
+            else
+              base_commit=""
+            fi
+            if [ -n "$HEAD" ]; then
+              head_commit=$(git rev-parse "$HEAD" 2>/dev/null) || true
+            else
+              head_commit=""
+            fi
+            if [ "$base_commit" == "$head_commit" ] ; then
+              echo "::warning::BASE and HEAD commits are the same commit. Skipping scan."
+              exit 1
+            fi
+
+          ##########################################
+          ## Scan commits based on event type     ##
+          ##########################################
+          else
+            if [ "${{ github.event_name }}" == "push" ]; then
+              COMMIT_LENGTH=$(printenv COMMIT_IDS | jq length)
+              if [ $COMMIT_LENGTH == "0" ]; then
+                echo "No commits to scan"
+                exit 0
+              fi
+              HEAD=${{ github.event.after }}
+              if [ ${{ github.event.before }} == "0000000000000000000000000000000000000000" ]; then
+                BASE=""
+              else
+                BASE=${{ github.event.before }}
+              fi
+            elif [ "${{ github.event_name }}" == "workflow_dispatch" ] || [ "${{ github.event_name }}" == "schedule" ]; then
+              BASE=""
+              HEAD=""
+            elif [ "${{ github.event_name }}" == "pull_request" ]; then
+              BASE=${{github.event.pull_request.base.sha}}
+              HEAD=${{github.event.pull_request.head.sha}}
+            fi
+          fi
+
+          ##########################################
+          ##          Run TruffleHog              ##
+          ##########################################
+
+          docker run --rm -v "${{ github.workspace }}:/tmp" -w /tmp \
+          ghcr.io/trufflesecurity/trufflehog:$VERSION \
+          git file:///tmp \
+          ${BASE:+--since-commit $BASE} \
+          ${HEAD:+--branch $HEAD} \
+          --github-actions \
+          --no-update \
+          $ARGS > $GITHUB_WORKSPACE/trufflehog_pr.json || true
+
+      - name: Comment on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const filePath = path.join(process.env.GITHUB_WORKSPACE, 'trufflehog_pr.json');
+            let body;
+            if (fs.existsSync(filePath)) {
+              const data = fs.readFileSync(filePath, 'utf8').trim();
+              const results = data.split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(JSON.parse);
+
+              if (results.length === 0) {
+                body = `✅ **TruffleHog scan passed.**\n\nNo potential secrets were found in this pull request.`;
+              } else {
+                body = `🔐 **TruffleHog scan found potential secrets in this pull request.**\n\nTotal: **${results.length}** findings\n\n`;
+
+                for (const result of results) {
+                  const git = result.SourceMetadata?.Data?.Git || {};
+                  const extra = result.ExtraData || {};
+
+                  body += `- **File:** \`${git.file}\` (Line ${git.line})  
+                  **Commit:** [\`${git.commit.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${git.commit})  
+                  **Email:** ${git.email}  
+                  **Secret Type:** ${result.DetectorName}  
+                  **Raw Value (Redacted):** \`${result.Redacted}\`  
+                  **ARN:** \`${extra.arn || 'N/A'}\`  
+                  **Rotation Guide:** [Link](${extra.rotation_guide || '#'})\n`;
+                }
+              }
+            } else {
+              body = '⚠️ **TruffleHog scan could not produce any results for this pull request.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Result
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          file=$(cat "$GITHUB_WORKSPACE/trufflehog_pr.json");
+          echo "$file"
+          if [ -z "$file" ]; then
+            echo "file is empty"
+          else
+            echo "file is not empty"
+            exit 1
+          fi
