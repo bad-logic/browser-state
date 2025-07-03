@@ -144,9 +144,6 @@ jobs:
         run: |
           file=$(cat "$GITHUB_WORKSPACE/trufflehog_pr.json");
           echo "$file"
-          if [ -z "$file" ]; then
-            echo "file is empty"
-          else
-            echo "file is not empty"
+          if [ -n "$file" ]; then
             exit 1
           fi
