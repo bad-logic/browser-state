@@ -44,7 +44,7 @@ jobs:
           docker run --rm -v "${{ github.workspace }}:/tmp" -w /tmp \
           ghcr.io/trufflesecurity/trufflehog:$VERSION \
           git file:///tmp \
-          --branch "$GITHUB_HEAD_REF"
+          --branch "$GITHUB_HEAD_REF" \
           --github-actions \
           --no-update \
           $ARGS > $GITHUB_WORKSPACE/trufflehog_results.json || true
