@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react'
 import SnapshotViewer from "./components/SnapShotViewer.tsx";
 import type {IPageData, IRequest} from "./utils/interfaces.ts";
 import NetworkTab from "./components/NetworkTab.tsx";
+import {getTabId} from "./utils/utility.ts";
 
 
 function App() {
@@ -11,20 +12,19 @@ function App() {
     const [tabId, setTabId] = useState(-1);
     const [isCapturing, setIsCapturing] = useState(false);
 
-
     useEffect(() => {
-        // @ts-expect-error chrome object is available in Chrome extension environment
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs: { id: number; }[]) => {
-            const tabId = tabs[0].id;
-            setTabId(tabId);
+        getTabId().then(id=>{
+            setTabId(id);
+            chrome.debugger.getTargets().then((arr)=>{
+                const tabInfo = arr.find(t=>t.tabId===id);
+                console.log("current tab information >>>",{tabInfo});
+                if(tabInfo){
+                    setIsCapturing(tabInfo.attached);
+                }
+            })
         });
-    }, [])
 
-    useEffect(()=>{
-        if(tabId!==-1){
-            generateReport();
-        }
-    },[tabId])
+    }, [])
 
     const reset = ()=>{
         setSnapshotData(null);
@@ -51,8 +51,15 @@ function App() {
             if(isCapturing){
                 setIsCapturing(false);
                 generateReport();
+                // @ts-expect-error chrome object is available in Chrome extension environment
+                chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(response: {debuggerAttached:boolean}) => {
+                    setIsCapturing(response.debuggerAttached)
+                });
+
             }else{
                 setIsCapturing(true);
+                setSnapshotData(null);
+                setNetworkData(null);
                 // @ts-expect-error chrome object is available in Chrome extension environment
                 chrome.runtime.sendMessage({type: "ATTACH_DEBUGGER", tabId },(response: {debuggerAttached:boolean}) => {
                     setIsCapturing(response.debuggerAttached)
@@ -74,7 +81,6 @@ function App() {
                     onClick={reset}
                 >
                     {/* Inline SVG refresh icon */}
-
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" transform="matrix(-1, 0, 0, 1, 0, 0)rotate(0)">
                         <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
                         <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
@@ -87,59 +93,62 @@ function App() {
                 </button>
             </div>
             {
-                (!snapshotData && !networkData) &&
-                (<div className="flex flex-1 items-center justify-center">
-                    <button
-                        onClick={captureSnapshot}
-                        className="relative h-24 w-24 rounded-full bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-3xl bg-opacity-40 border border-gray-100 text-black font-semibold shadow-xl flex justify-center items-center hover:bg-opacity-60 transition"
-                        aria-label="Capture Snapshot"
-                    >
-                        {isCapturing ? (
-                            <>
-                                <span
-                                    className="absolute h-20 w-20 rounded-full border-4 border-gray-700 border-t-transparent animate-spin"/>
-                                <span className="relative z-10">Stop</span>
-                            </>
-                        ) : (
-                            "Capture"
-                        )}
-                    </button>
-                </div>)
-            }
-            {(snapshotData || networkData) && (
-                <div className="flex flex-col flex-1 overflow-hidden">
-                    <div className="flex space-x-2 mb-3">
-                        {['html', 'css', 'js', 'network'].map((tab) => (
+                ((!snapshotData && !networkData) || isCapturing) ?
+                    (
+                        <div className="flex flex-1 items-center justify-center">
                             <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-4 py-2 rounded-t-lg border-b-2 ${
-                                    activeTab === tab ? 'border-blue-600 bg-white font-semibold' : 'border-transparent bg-gray-100'
-                                }`}
+                                onClick={captureSnapshot}
+                                className="relative h-24 w-24 rounded-full bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-3xl bg-opacity-40 border border-gray-100 text-black font-semibold shadow-xl flex justify-center items-center hover:bg-opacity-60 transition"
+                                aria-label="Capture Snapshot"
                             >
-                                {tab.toUpperCase()}
+                                {isCapturing ? (
+                                    <>
+                                        <span
+                                            className="absolute h-20 w-20 rounded-full border-4 border-gray-700 border-t-transparent animate-spin"/>
+                                        <span className="relative z-10">Stop</span>
+                                    </>
+                                ) : (
+                                    "Capture"
+                                )}
                             </button>
-                        ))}
-                    </div>
+                        </div>
+                    )
+                    :
+                    (
+                        <div className="flex flex-col flex-1 overflow-hidden">
+                            <div className="flex space-x-2 mb-3">
+                                {['html', 'css', 'js', 'network'].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`px-4 py-2 rounded-t-lg border-b-2 ${
+                                            activeTab === tab ? 'border-blue-600 bg-white font-semibold' : 'border-transparent bg-gray-100'
+                                        }`}
+                                    >
+                                        {tab.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
 
-                    <div className="flex-1 border rounded-b-lg bg-white overflow-auto p-3">
-                        {activeTab !== 'network' ? (
-                            <SnapshotViewer
-                                type={activeTab}
-                                content={
-                                    activeTab === 'html'
-                                        ? snapshotData?.html
-                                        : activeTab === 'css'
-                                            ? snapshotData?.styles
-                                            : snapshotData?.scripts
-                                }
-                            />
-                        ) : (
-                            <NetworkTab networkData={networkData!}/>
-                        )}
-                    </div>
-                </div>
-            )}
+                            <div className="flex-1 border rounded-b-lg bg-white overflow-auto p-3">
+                                {activeTab !== 'network' ? (
+                                    <SnapshotViewer
+                                        type={activeTab}
+                                        content={
+                                            activeTab === 'html'
+                                                ? snapshotData?.html
+                                                : activeTab === 'css'
+                                                    ? snapshotData?.styles
+                                                    : snapshotData?.scripts
+                                        }
+                                    />
+                                ) : (
+                                    <NetworkTab networkData={networkData!}/>
+                                )}
+                            </div>
+                        </div>
+                    )
+            }
         </div>
     );
 }
