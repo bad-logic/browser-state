@@ -21,7 +21,7 @@ function capturePageData() {
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "CAPTURE_SNAPSHOT") {
+    if (message.type === "CAPTURE_BROWSER_SNAPSHOT") {
         const pageData = capturePageData();
         sendResponse(pageData);
     }
