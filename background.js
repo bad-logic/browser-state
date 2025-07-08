@@ -1,3 +1,5 @@
+import {localStorage} from "./src/utils/utility.js";
+
 let networkData = {};
 
 function detach(tabId){
@@ -7,6 +9,8 @@ function detach(tabId){
 
 // Detach debugger when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
+    localStorage.saveToLocalStore(`${tabId}-snapshot`,null);
+    localStorage.saveToLocalStore(`${tabId}-network`,null);
     detach(tabId);
 });
 
