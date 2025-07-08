@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import SnapshotViewer from "./components/SnapShotViewer.tsx";
 import type {IPageData, IRequest} from "./utils/interfaces.ts";
 import NetworkTab from "./components/NetworkTab.tsx";
-import {getTabId} from "./utils/utility.ts";
+import {getTabId, localStorage} from "./utils/utility.ts";
 
 
 function App() {
@@ -17,32 +17,47 @@ function App() {
             setTabId(id);
             chrome.debugger.getTargets().then((arr)=>{
                 const tabInfo = arr.find(t=>t.tabId===id);
-                console.log("current tab information >>>",{tabInfo});
+                console.log("current tab information",{tabInfo});
                 if(tabInfo){
                     setIsCapturing(tabInfo.attached);
                 }
+                localStorage.getFromLocalStore(`${id}-snapshot`).then((d)=>{
+                    console.log("snapshot",{d});
+                    if(d){
+                        setSnapshotData(d as IPageData)
+                        localStorage.getFromLocalStore(`${id}-network`).then((d)=>{
+                            if(d){
+                                console.log("network",{d});
+                                setNetworkData(d as IRequest[]);
+                            }
+                        });
+                    }
+                });
             })
-        });
 
+        });
     }, [])
 
-    const reset = ()=>{
+    const reset = ()=> {
         setSnapshotData(null);
         setNetworkData(null);
+        localStorage.cleanLocalStorage();
         setActiveTab('html');
     }
 
     const generateReport = ()=>{
         // Get html, css, js
         // @ts-expect-error chrome object is available in Chrome extension environment
-        chrome.tabs.sendMessage(tabId,{type: "CAPTURE_SNAPSHOT"},(pageData: IPageData) => {
+        chrome.tabs.sendMessage(tabId,{type: "CAPTURE_BROWSER_SNAPSHOT"},(pageData: IPageData) => {
             setSnapshotData(pageData);
+            localStorage.saveToLocalStore(`${tabId}-snapshot`,pageData);
         });
 
         // Get network data
         // @ts-expect-error chrome object is available in Chrome extension environment
-        chrome.runtime.sendMessage({type: "GET_SNAPSHOT_DATA"},(response: { networkData: IRequest[] }) => {
+        chrome.runtime.sendMessage({type: "GET_NETWORK_DIAGNOSTICS"},(response: { networkData: IRequest[] }) => {
             setNetworkData(response.networkData);
+            localStorage.saveToLocalStore(`${tabId}-network`,response.networkData);
         });
     }
 
@@ -55,7 +70,6 @@ function App() {
                 chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(response: {debuggerAttached:boolean}) => {
                     setIsCapturing(response.debuggerAttached)
                 });
-
             }else{
                 setIsCapturing(true);
                 setSnapshotData(null);

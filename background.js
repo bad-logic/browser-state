@@ -12,7 +12,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 
 chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
-    console.log("MESSAGE RECEIVED", {message, sender, cb});
+    console.info("MESSAGE RECEIVED", {message, sender, cb});
     if (message.type === "ATTACH_DEBUGGER") {
         console.info("attaching debugger to tab ", message.tabId)
         // attach debugger
@@ -31,7 +31,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
         // detach debugger
         detach(message.tabId);
         cb({debuggerAttached: false});
-    }else if (message.type === "GET_SNAPSHOT_DATA") {
+    }else if (message.type === "GET_NETWORK_DIAGNOSTICS") {
         // get network data
         const data = [];
         for(const r in networkData){
@@ -45,7 +45,6 @@ chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
 
 // Listen for network response events
 chrome.debugger.onEvent.addListener((debuggeeId, message, params) => {
-    console.log({debuggeeId,message,params})
     if(message === "Network.requestWillBeSent"){
         networkData[params.requestId] = {
             tabId: debuggeeId.tabId,
