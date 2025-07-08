@@ -1,14 +1,20 @@
 let networkData = {};
 
+function detach(tabId){
+    console.info("detaching debugger from tab ", tabId);
+    chrome.debugger.detach({ tabId });
+}
+
 // Detach debugger when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
-    chrome.debugger.detach({ tabId });
+    detach(tabId);
 });
 
 
 chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
     console.log("MESSAGE RECEIVED", {message, sender, cb});
     if (message.type === "ATTACH_DEBUGGER") {
+        console.info("attaching debugger to tab ", message.tabId)
         // attach debugger
         chrome.debugger.attach({ tabId: message.tabId }, "1.3", () => {
             if (chrome.runtime.lastError) {
@@ -18,17 +24,15 @@ chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
             }
             // Enable Network domain
             chrome.debugger.sendCommand({ tabId: message.tabId }, "Network.enable", {}, () => {
-                console.log("Network domain enabled for tab", message.tabId);
                 cb({debuggerAttached: false});
             });
         });
     }else if(message.type === "DETACH_DEBUGGER"){
         // detach debugger
-        chrome.debugger.detach({ tabId:message.tabId });
+        detach(message.tabId);
         cb({debuggerAttached: false});
     }else if (message.type === "GET_SNAPSHOT_DATA") {
         // get network data
-        console.log({networkData})
         const data = [];
         for(const r in networkData){
             data.push(networkData[r]);
@@ -37,24 +41,6 @@ chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
         networkData = {}; // Reset after sending
     }
 });
-
-
-
-// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-//     if (changeInfo.status === "complete") {
-//         chrome.debugger.attach({ tabId }, "1.3", () => {
-//             if (chrome.runtime.lastError) {
-//                 console.error(chrome.runtime.lastError.message);
-//                 return;
-//             }
-//             // Enable Network domain
-//             chrome.debugger.sendCommand({ tabId }, "Network.enable", {}, () => {
-//                 console.log("Network domain enabled for tab", tabId);
-//             });
-//         });
-//     }
-// });
-
 
 
 // Listen for network response events
