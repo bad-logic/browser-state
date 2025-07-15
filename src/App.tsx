@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 import SnapshotViewer from "./components/SnapShotViewer.tsx";
 import type {IPageData, IRequest} from "./utils/interfaces.ts";
 import NetworkTab from "./components/NetworkTab.tsx";
-import {getTabId, localStorage} from "./utils/utility.ts";
+import {getTabInfo, localStorage} from "./utils/utility.ts";
 
 
 function App() {
@@ -13,7 +13,7 @@ function App() {
     const [isCapturing, setIsCapturing] = useState(false);
 
     useEffect(() => {
-        getTabId().then(id=>{
+        getTabInfo().then(({id})=>{
             setTabId(id);
             chrome.debugger.getTargets().then((arr)=>{
                 const tabInfo = arr.find(t=>t.tabId===id);
@@ -143,7 +143,7 @@ function App() {
                         <div className="flex flex-1 items-center justify-center">
                             <button
                                 onClick={captureSnapshot}
-                                className="relative h-24 w-24 rounded-full bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-3xl bg-opacity-40 border border-gray-100 text-black font-semibold shadow-xl flex justify-center items-center hover:bg-opacity-60 transition"
+                                className="relative h-24 w-24 rounded-full bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-3xl bg-opacity-40 border border-gray-100 text-black font-semibold shadow-xl flex justify-center items-center hover:bg-opacity-60 transition cursor-pointer"
                                 aria-label="Capture Snapshot"
                             >
                                 {isCapturing ? (
