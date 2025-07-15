@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import CodeBlock from "./CodeBlock.tsx";
+import {getTabInfo} from "../utils/utility.ts";
 
 interface ISnapShotViewer {
     type: string;
@@ -10,10 +11,9 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
     const [attachmentName,setAttachmentName] = useState<string>('');
 
     useEffect(()=>{
-        // @ts-expect-error chrome object is available in chrome extension environment
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs: { title:string }[]) {
-            setAttachmentName(tabs[0].title)
-        });
+        getTabInfo().then(({title})=>{
+            setAttachmentName(title)
+        })
     },[])
 
 
@@ -41,7 +41,7 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
                 <div className="space-x-2">
                     <button
                         onClick={handleCopy}
-                        className="p-2 hover:bg-gray-700 rounded transition"
+                        className="p-2 hover:bg-gray-700 rounded transition cursor-pointer"
                         title="Copy to clipboard"
                         aria-label="Copy to clipboard"
                     >
@@ -63,7 +63,7 @@ function SnapshotViewer({type, content}: ISnapShotViewer) {
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="p-2 hover:bg-gray-700 rounded transition"
+                        className="p-2 hover:bg-gray-700 rounded transition cursor-pointer"
                         title="Download file"
                         aria-label="Download file"
                     >
