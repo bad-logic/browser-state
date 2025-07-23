@@ -33,7 +33,6 @@ chrome.runtime.onMessage.addListener( (message, sender, cb) => {
         detach(message.tabId);
         cb({attached: false});
     }else if (message.type === "GET_NETWORK_DIAGNOSTICS") {
-        console.log({networkData})
         // get network data
         const data = [];
         for(const r in networkData){
