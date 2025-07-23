@@ -1,4 +1,59 @@
-import type {IRequest} from "./interfaces.ts";
+import type {IRequest,Request,Response} from "./interfaces.ts";
+
+
+const generateRequest = (request:Request)=>{
+    return {
+        method: request.method,
+        url: request.url,
+        headers: Object.keys(request.headers).map(key=>{
+            return {
+                "name":key,
+                "value":request.headers[key]
+            }
+        }),
+        // @TODO try with the following
+        // postData: request.postData,
+        // "queryString": [],
+        // "cookies": [],
+        // "headersSize": -1,
+        // "bodySize": 0
+    }
+
+}
+
+const generateResponse = (response:Response)=>{
+    return {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        protocol:response.protocol,
+        remoteIPAddress:response.remoteIPAddress,
+        remotePort:response.remotePort,
+        headers: Object.keys(response.headers).map(key=>{
+            return {
+                "name":key,
+                "value":response.headers[key]
+            }
+        }),
+        alternateProtocolUsage: response.alternateProtocolUsage,
+        mimeType:response.mimeType,
+        contentType:response.contentType,
+        base64Encoded: response.base64Encoded,
+        encodedDataLength:response.encodedDataLength,
+        charset:response.charset,
+        body: response.body,
+        responseTime:response.responseTime,
+        connectionReused:response.connectionReused,
+        fromDiskCache:response.fromDiskCache,
+        fromPrefetchCache:response.fromPrefetchCache,
+        fromServiceWorker:response.fromServiceWorker,
+        securityDetails:response.securityDetails,
+        timing:response.timing,
+        // @TODO try with the following
+        // cookies: [],
+
+    }
+}
 
 export const createHarFromRequests = (requests: IRequest[]) => {
     return {
@@ -8,19 +63,17 @@ export const createHarFromRequests = (requests: IRequest[]) => {
                 name: 'Browser State',
                 version: '1.0'
             },
-            // @TODO fix entries to match with har files
             entries:requests.map(req => {
                 return {
                     _connectionId: req.response.connectionId,
                     _initiator: {},
                     _priority: "",
                     _resourceType: req.response.contentType,
-                    connection: "",
-                    request: req.request,
-                    response: req.response,
+                    connection: req.response.remotePort,
+                    request: generateRequest(req.request),
+                    response: generateResponse(req.response),
                     cache: {},
                     serverIPAddress: req.response.remoteIPAddress,
-                    startedDateTime: new Date(req.start).toISOString(), //2025-07-15T01:59:51.177Z, @TODO fix this
                     time: req.end - req.start,
                     timings: req.response.timing
                 }
