@@ -49,7 +49,7 @@ export default function NetworkTab({networkData}: INetworkPanel) {
     };
 
     const handleDownload = ()=>{
-        downloadHarFile(createHarFromRequests(networkData),`${host ?? window.location}.har`)
+        downloadHarFile(createHarFromRequests(networkData),`${host ?? window.location}.json`)
     }
 
     return (
