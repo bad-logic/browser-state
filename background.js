@@ -1,4 +1,3 @@
-import {localStorage} from "./src/utils/utility.js";
 
 let networkData = {};
 
@@ -9,13 +8,11 @@ function detach(tabId){
 
 // Detach debugger when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
-    localStorage.saveToLocalStore(`${tabId}-snapshot`,null);
-    localStorage.saveToLocalStore(`${tabId}-network`,null);
     detach(tabId);
 });
 
 
-chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
+chrome.runtime.onMessage.addListener( (message, sender, cb) => {
     console.info("MESSAGE RECEIVED", {message, sender, cb});
     if (message.type === "ATTACH_DEBUGGER") {
         console.info("attaching debugger to tab ", message.tabId)
@@ -23,26 +20,29 @@ chrome.runtime.onMessage.addListener(async (message, sender, cb) => {
         chrome.debugger.attach({ tabId: message.tabId }, "1.3", () => {
             if (chrome.runtime.lastError) {
                 console.error(chrome.runtime.lastError.message);
-                cb({debuggerAttached: false});
+                cb({attached: false});
                 return;
             }
             // Enable Network domain
             chrome.debugger.sendCommand({ tabId: message.tabId }, "Network.enable", {}, () => {
-                cb({debuggerAttached: false});
+                cb({attached: true});
             });
         });
     }else if(message.type === "DETACH_DEBUGGER"){
         // detach debugger
         detach(message.tabId);
-        cb({debuggerAttached: false});
+        cb({attached: false});
     }else if (message.type === "GET_NETWORK_DIAGNOSTICS") {
+        console.log({networkData})
         // get network data
         const data = [];
         for(const r in networkData){
-            data.push(networkData[r]);
+            if(networkData[r].tabId===message.tabId){
+                data.push({...networkData[r],request:{...networkData[r].request,response:{...networkData[r].response}}});
+                delete networkData[r];
+            }
         }
         cb({ networkData: data });
-        networkData = {}; // Reset after sending
     }
 });
 
