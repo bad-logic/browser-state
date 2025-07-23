@@ -29,7 +29,6 @@ export default function NetworkTab({networkData}: INetworkPanel) {
     }, [selectedRequest]);
 
     const renderContent = ( data: any, type = "application/json", isBase64Encoded = false) => {
-        console.log({data,type,isBase64Encoded})
         if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
             return <p className="text-sm text-gray-500">No data</p>;
         }
@@ -59,8 +58,8 @@ export default function NetworkTab({networkData}: INetworkPanel) {
                     <button
                     onClick={handleDownload}
                     className="p-2 hover:bg-gray-700 rounded transition cursor-pointer"
-                    title="Download file"
-                    aria-label="Download file"
+                    title="Download File"
+                    aria-label="Download File"
                 >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
