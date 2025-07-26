@@ -12,7 +12,6 @@ export default defineManifest(async () => ({
         "webNavigation",
         "webRequest",
         "debugger"
-        // "webRequestBlocking",
     ],
     background: {
         "service_worker": "background.js",
@@ -25,11 +24,24 @@ export default defineManifest(async () => ({
         }
     ],
     action: {
-        "default_popup": "index.html"
+        "default_popup": "index.html",
+        "default_icon": {
+            "16": "icons/logo.png",
+            "32": "icons/logo.png",
+            "48": "icons/logo.png",
+            "128": "icons/logo.png"
+        },
     },
     host_permissions: [
         "http://*/",
         "https://*/"
-    ]
+    ],
+    "icons": {
+        "16": "icons/logo.png",
+        "32": "icons/logo.png",
+        "48": "icons/logo.png",
+        "128": "icons/logo.png"
+    },
+
 }))
 
