@@ -2,7 +2,8 @@ import {useEffect, useState} from 'react'
 import SnapshotViewer from "./components/SnapShotViewer.tsx";
 import type {IPageData, IRequest} from "./utils/interfaces.ts";
 import NetworkTab from "./components/NetworkTab.tsx";
-import {getTabId, localStorage} from "./utils/utility.ts";
+import {getTabInfo} from "./utils/utility.ts";
+import {readFromIdb} from "./utils/idb.ts";
 
 
 function App() {
@@ -13,27 +14,21 @@ function App() {
     const [isCapturing, setIsCapturing] = useState(false);
 
     useEffect(() => {
-        getTabId().then(id=>{
+        getTabInfo().then(({id})=>{
             setTabId(id);
             chrome.debugger.getTargets().then((arr)=>{
                 const tabInfo = arr.find(t=>t.tabId===id);
-                console.log("current tab information",{tabInfo});
                 if(tabInfo){
                     setIsCapturing(tabInfo.attached);
                 }
-                localStorage.getFromLocalStore(`${id}-snapshot`).then((d)=>{
-                    console.log("snapshot",{d});
-                    if(d){
-                        setSnapshotData(d as IPageData)
-                        localStorage.getFromLocalStore(`${id}-network`).then((d)=>{
-                            if(d){
-                                console.log("network",{d});
-                                setNetworkData(d as IRequest[]);
-                            }
-                        });
-                    }
-                });
             })
+
+            // @ts-expect-error chrome object is available in Chrome extension environment
+            chrome.runtime.sendMessage({tabId:id, type: "INITIALIZE_DB"},(ok:boolean) => {
+                if(!ok){
+                    console.error("[APPLICATION_MOVED_UNSTABLE_STATE] some features like network might not work");
+                }
+            });
 
         });
     }, [])
@@ -41,13 +36,7 @@ function App() {
     const reset = ()=> {
         setSnapshotData(null);
         setNetworkData(null);
-        localStorage.saveToLocalStore(`${tabId}-snapshot`,null);
-        localStorage.saveToLocalStore(`${tabId}-network`,null);
         setActiveTab('html');
-    }
-
-    const clearCache = ()=>{
-        localStorage.cleanLocalStorage();
     }
 
     const generateReport = ()=>{
@@ -55,15 +44,16 @@ function App() {
         // @ts-expect-error chrome object is available in Chrome extension environment
         chrome.tabs.sendMessage(tabId,{type: "CAPTURE_BROWSER_SNAPSHOT"},(pageData: IPageData) => {
             setSnapshotData(pageData);
-            localStorage.saveToLocalStore(`${tabId}-snapshot`,pageData);
         });
 
         // Get network data
         // @ts-expect-error chrome object is available in Chrome extension environment
-        chrome.runtime.sendMessage({type: "GET_NETWORK_DIAGNOSTICS"},(response: { networkData: IRequest[] }) => {
-            setNetworkData(response.networkData);
-            localStorage.saveToLocalStore(`${tabId}-network`,response.networkData);
-        });
+        chrome.runtime.sendMessage({type: "GET_NETWORK_DIAGNOSTICS", tabId}, async (ok:boolean) => {
+            if(ok){
+                const reqs = await readFromIdb(tabId);
+                setNetworkData(reqs as IRequest[]);
+            }
+        })
     }
 
     const captureSnapshot = () => {
@@ -72,16 +62,16 @@ function App() {
                 setIsCapturing(false);
                 generateReport();
                 // @ts-expect-error chrome object is available in Chrome extension environment
-                chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(response: {debuggerAttached:boolean}) => {
-                    setIsCapturing(response.debuggerAttached)
-                });
+                chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(ok:boolean) => {
+                    setIsCapturing(!ok);
+                })
             }else{
                 setIsCapturing(true);
                 setSnapshotData(null);
                 setNetworkData(null);
                 // @ts-expect-error chrome object is available in Chrome extension environment
-                chrome.runtime.sendMessage({type: "ATTACH_DEBUGGER", tabId },(response: {debuggerAttached:boolean}) => {
-                    setIsCapturing(response.debuggerAttached)
+                chrome.runtime.sendMessage({type: "ATTACH_DEBUGGER", tabId },(ok:boolean) => {
+                    setIsCapturing(ok)
                 });
             }
         }else{
@@ -114,28 +104,6 @@ function App() {
                         />
                     </svg>
                 </button>
-
-                <button
-                    className="ml-2 px-3 py-2 cursor-pointer border border-gray-300 bg-white rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                    title="Clear Cache"
-                    aria-label="Clear Cache"
-                    onClick={clearCache}
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        className="w-5 h-5"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7"
-                        />
-                    </svg>
-                </button>
             </div>
             {
                 ((!snapshotData && !networkData) || isCapturing) ?
@@ -143,7 +111,7 @@ function App() {
                         <div className="flex flex-1 items-center justify-center">
                             <button
                                 onClick={captureSnapshot}
-                                className="relative h-24 w-24 rounded-full bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-3xl bg-opacity-40 border border-gray-100 text-black font-semibold shadow-xl flex justify-center items-center hover:bg-opacity-60 transition"
+                                className="relative h-24 w-24 rounded-full bg-gray-400 bg-clip-padding backdrop-filter backdrop-blur-3xl bg-opacity-40 border border-gray-100 text-black font-semibold shadow-xl flex justify-center items-center hover:bg-opacity-60 transition cursor-pointer"
                                 aria-label="Capture Snapshot"
                             >
                                 {isCapturing ? (
@@ -188,7 +156,7 @@ function App() {
                                         }
                                     />
                                 ) : (
-                                    <NetworkTab networkData={networkData!}/>
+                                    <NetworkTab networkData={networkData ?? []}/>
                                 )}
                             </div>
                         </div>

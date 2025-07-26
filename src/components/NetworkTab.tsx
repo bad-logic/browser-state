@@ -4,6 +4,8 @@ import {Card, CardContent} from "./Card.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "./Tabs.tsx";
 import {ScrollArea} from "./ScrollArea.tsx";
 import CodeBlock from "./CodeBlock.tsx";
+import {createHarFromRequests, downloadHarFile} from "../utils/har.ts";
+import {getTabInfo} from "../utils/utility.ts";
 
 
 interface INetworkPanel {
@@ -13,14 +15,20 @@ interface INetworkPanel {
 export default function NetworkTab({networkData}: INetworkPanel) {
     const [selectedRequest, setSelectedRequest] = useState<IRequest | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
+    const [host, setHost] = useState<string|null>();
     const drawerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(()=>{
+        getTabInfo().then(({host})=>{
+            setHost((host));
+        })
+    },[]);
 
     useEffect(() => {
         setActiveTab("overview");
     }, [selectedRequest]);
 
     const renderContent = ( data: any, type = "application/json", isBase64Encoded = false) => {
-        console.log({data,type,isBase64Encoded})
         if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
             return <p className="text-sm text-gray-500">No data</p>;
         }
@@ -39,28 +47,57 @@ export default function NetworkTab({networkData}: INetworkPanel) {
         }
     };
 
+    const handleDownload = ()=>{
+        downloadHarFile(createHarFromRequests(networkData),`${host ?? window.location}.json`)
+    }
+
     return (
         <div className="relative p-4">
+            {networkData.length !== 0  &&
+                <div className="flex justify-end">
+                    <button
+                    onClick={handleDownload}
+                    className="p-2 hover:bg-gray-700 rounded transition cursor-pointer"
+                    title="Download File"
+                    aria-label="Download File"
+                >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12v8m0 0l-4-4m4 4l4-4M12 4v8"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            }
             {/* Request list */}
             <ScrollArea className="max-h-[80vh] rounded-xl p-2 w-full">
                 <div className="space-y-2">
-                    {networkData.length===0 ?
+                    {networkData.length === 0 ?
                         <p className="text-sm text-gray-500">No data Captured</p>
                         : networkData.map((req) => (
-                        <Card
-                            key={req.requestId}
-                            className="cursor-pointer hover:bg-gray-100"
-                            onClick={() => setSelectedRequest(req)}
-                        >
-                            <CardContent className="flex justify-between items-center p-2">
-                                <div className="w-10/12">
-                                    <p className="text-sm font-medium truncate">{req.method} {req.url}</p>
-                                    <p className="text-xs text-gray-500 truncate">{req.statusLine}</p>
-                                </div>
-                                <span className="text-sm text-green-600">{req.status}</span>
-                            </CardContent>
-                        </Card>
-                    ))}
+                            <Card
+                                key={req.requestId}
+                                className="cursor-pointer hover:bg-gray-100"
+                                onClick={() => setSelectedRequest(req)}
+                            >
+                                <CardContent className="flex justify-between items-center p-2">
+                                    <div className="w-10/12">
+                                        <p className="text-sm font-medium truncate">{req.method} {req.url}</p>
+                                        <p className="text-xs text-gray-500 truncate">{req.statusLine}</p>
+                                    </div>
+                                    <span className="text-sm text-green-600">{req.status}</span>
+                                </CardContent>
+                            </Card>
+                        ))}
                 </div>
             </ScrollArea>
 
@@ -88,7 +125,7 @@ export default function NetworkTab({networkData}: INetworkPanel) {
                                     stroke="currentColor"
                                     strokeWidth={2}
                                 >
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
                         </div>
@@ -126,7 +163,7 @@ export default function NetworkTab({networkData}: INetworkPanel) {
                                     {renderContent(selectedRequest.response)}
                                 </TabsContent>
                                 <TabsContent value="responsebody">
-                                    {renderContent(selectedRequest.response?.body, selectedRequest.response?.contentType,selectedRequest.response?.base64Encoded )}
+                                    {renderContent(selectedRequest.response?.body, selectedRequest.response?.contentType, selectedRequest.response?.base64Encoded)}
                                 </TabsContent>
                             </div>
                         </Tabs>
