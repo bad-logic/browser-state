@@ -2,7 +2,7 @@
   "name": "browser-state",
   "description": "Chrome Extension to view Browser State",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "d": "vite dev",

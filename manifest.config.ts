@@ -9,8 +9,6 @@ export default defineManifest(async () => ({
     permissions: [
         "activeTab",
         "storage",
-        "webNavigation",
-        "webRequest",
         "debugger"
     ],
     background: {
@@ -32,10 +30,6 @@ export default defineManifest(async () => ({
             "128": "icons/logo.png"
         },
     },
-    host_permissions: [
-        "http://*/",
-        "https://*/"
-    ],
     "icons": {
         "16": "icons/logo.png",
         "32": "icons/logo.png",
