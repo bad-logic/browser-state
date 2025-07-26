@@ -14,13 +14,13 @@ export default defineManifest(async () => ({
         "debugger"
     ],
     background: {
-        "service_worker": "background.js",
+        "service_worker": "scripts/background.js",
         "type": "module"
     },
     content_scripts: [
         {
             "matches": ["<all_urls>"],
-            "js": ["content.js"]
+            "js": ["scripts/content.js"]
         }
     ],
     action: {

@@ -1,4 +1,4 @@
-import {dbName, objectStoreName} from "./src/utils/idb.js";
+import {dbName, objectStoreName} from "../src/utils/idb.js";
 
 let networkData = {};
 
