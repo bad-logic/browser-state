@@ -43,6 +43,9 @@ function App() {
         // Get html, css, js
         // @ts-expect-error chrome object is available in Chrome extension environment
         chrome.tabs.sendMessage(tabId,{type: "CAPTURE_BROWSER_SNAPSHOT"},(pageData: IPageData) => {
+            if(!pageData){
+                alert("Capture Failed!!! Try Reloading Page.");
+            }
             setSnapshotData(pageData);
         });
 
@@ -59,12 +62,11 @@ function App() {
     const captureSnapshot = () => {
         if(tabId !== -1){
             if(isCapturing){
-                setIsCapturing(false);
                 generateReport();
                 // @ts-expect-error chrome object is available in Chrome extension environment
                 chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(ok:boolean) => {
                     setIsCapturing(!ok);
-                })
+                });
             }else{
                 setIsCapturing(true);
                 setSnapshotData(null);
@@ -82,8 +84,8 @@ function App() {
 
     return (
         <div className="w-[800px] h-[600px] p-4 overflow-hidden flex flex-col">
-            <div className="flex flex-row">
-                <h1 className="text-xl font-semibold mb-4 flex items-center gap-2">Tab: {tabId}</h1>
+            <div className="flex flex-row mb-4 ">
+                <h1 className="text-xl font-semibold flex items-center gap-2">Tab: {tabId}</h1>
                 <button
                     className="ml-2 px-3 py-2 cursor-pointer border border-gray-300 bg-white rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                     title="Reset"
