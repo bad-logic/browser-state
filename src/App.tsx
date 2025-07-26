@@ -3,6 +3,7 @@ import SnapshotViewer from "./components/SnapShotViewer.tsx";
 import type {IPageData, IRequest} from "./utils/interfaces.ts";
 import NetworkTab from "./components/NetworkTab.tsx";
 import {getTabInfo} from "./utils/utility.ts";
+import {readFromIdb} from "./utils/idb.ts";
 
 
 function App() {
@@ -22,6 +23,13 @@ function App() {
                 }
             })
 
+            // @ts-expect-error chrome object is available in Chrome extension environment
+            chrome.runtime.sendMessage({tabId:id, type: "INITIALIZE_DB"},(ok:boolean) => {
+                if(!ok){
+                    console.error("[APPLICATION_MOVED_UNSTABLE_STATE] some features like network might not work");
+                }
+            });
+
         });
     }, [])
 
@@ -40,10 +48,12 @@ function App() {
 
         // Get network data
         // @ts-expect-error chrome object is available in Chrome extension environment
-        chrome.runtime.sendMessage({type: "GET_NETWORK_DIAGNOSTICS", tabId},(response: { networkData: IRequest[] }) => {
-            console.log({networkData: response.networkData})
-            setNetworkData(response.networkData);
-        });
+        chrome.runtime.sendMessage({type: "GET_NETWORK_DIAGNOSTICS", tabId}, async (ok:boolean) => {
+            if(ok){
+                const reqs = await readFromIdb(tabId);
+                setNetworkData(reqs as IRequest[]);
+            }
+        })
     }
 
     const captureSnapshot = () => {
@@ -52,16 +62,16 @@ function App() {
                 setIsCapturing(false);
                 generateReport();
                 // @ts-expect-error chrome object is available in Chrome extension environment
-                chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(response: {attached:boolean}) => {
-                    setIsCapturing(response.attached)
+                chrome.runtime.sendMessage({type: "DETACH_DEBUGGER", tabId },(ok:boolean) => {
+                    setIsCapturing(!ok);
                 })
             }else{
                 setIsCapturing(true);
                 setSnapshotData(null);
                 setNetworkData(null);
                 // @ts-expect-error chrome object is available in Chrome extension environment
-                chrome.runtime.sendMessage({type: "ATTACH_DEBUGGER", tabId },(response: {attached:boolean}) => {
-                    setIsCapturing(response.attached)
+                chrome.runtime.sendMessage({type: "ATTACH_DEBUGGER", tabId },(ok:boolean) => {
+                    setIsCapturing(ok)
                 });
             }
         }else{
@@ -146,7 +156,7 @@ function App() {
                                         }
                                     />
                                 ) : (
-                                    <NetworkTab networkData={networkData!}/>
+                                    <NetworkTab networkData={networkData ?? []}/>
                                 )}
                             </div>
                         </div>
