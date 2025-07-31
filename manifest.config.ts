@@ -8,7 +8,6 @@ export default defineManifest(async () => ({
     description: pkg.description,
     permissions: [
         "activeTab",
-        "storage",
         "debugger"
     ],
     background: {
